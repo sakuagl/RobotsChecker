@@ -1,4 +1,6 @@
+import requests
 from urllib.parse import urlparse, urljoin
+from requests.exceptions import RequestException
 
 class RobotsChecker:
     """
@@ -25,8 +27,16 @@ class RobotsChecker:
 
         # Construct the URL for the robots.txt file based on the base URL.
         robots_url = urljoin(base_url, "/robots.txt")
-        
-        print(robots_url)
+
+        # Attempt to retrieve the content of the robots.txt file.
+        try:
+            response = requests.get(robots_url)
+            content = response.text
+        except RequestException as e:
+            # If an error occurs, assume that access is not allowed.
+            print("A exception occurred:\n", str(e))
+            return False
+
         return True
 
 if __name__ == '__main__':
