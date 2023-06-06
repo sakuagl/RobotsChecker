@@ -7,6 +7,9 @@ class RobotsChecker:
         self.user_agent = user_agent
 
     def is_allowed(self, url: str) -> bool:
+        # Initialize variables
+        is_allowed = True
+        
         # Parse the base URL from the given URL.
         parsed_url = urlparse(url)
         base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
@@ -23,16 +26,23 @@ class RobotsChecker:
             status_code = response.status_code
             
             if status_code == 429 and status_code // 100 == 5:
-                return False
-            else:
-                return True 
+                is_allowed = False
         except requests.RequestException:
-            return False
+            is_allowed = False
 
         content = response.text.splitlines()
         user_agent_section = self._find_user_agent_section(content)
         
-        return True
+        # Allow access if no user agent section is found.
+        # Disallow or allow, and determine access permission.
+        for line in user_agent_section:
+            if line.startswith('Allow:'):
+                allow_path = line[len('Allow:'):].strip()
+            elif line.startswith('Disallow:'):
+                disallow_path = line[len('Disallow:'):].strip()
+
+        # If access permission is not specified, allow access.
+        return is_allowed
         
     def _raise_status(self, response: requests.Response) -> None:
         """
@@ -49,6 +59,17 @@ class RobotsChecker:
             raise StatusError("Unexpected HTTP status code", status_code)
         
     def _find_user_agent_section(self, content: list) -> list:
+        """
+        Extracts the section of the input `lines` that corresponds to the user agent
+        specified in the class instance.
+
+        Args:
+            lines (list): List of strings representing the contents of a robots.txt file.
+
+        Returns:
+            list: List of strings representing the section of the robots.txt file that
+            corresponds to the user agent specified in the class instance.
+        """
         # Create a user agent marker based on the class instance user agent
         marker = "User-agent: " + self.user_agent
         
