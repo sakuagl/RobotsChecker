@@ -19,7 +19,6 @@ class RobotsChecker:
         try:
             response = requests.get(robots_url)
             self._raise_status(response)
-            content = response.text
         except StatusError:
             status_code = response.status_code
             
@@ -30,6 +29,9 @@ class RobotsChecker:
         except requests.RequestException:
             return False
 
+        content = response.text.splitlines()
+        user_agent_section = self._find_user_agent_section(content)
+        
         return True
         
     def _raise_status(self, response: requests.Response) -> None:
@@ -46,8 +48,25 @@ class RobotsChecker:
         if status_code // 100 != 2:
             raise StatusError("Unexpected HTTP status code", status_code)
         
-    def check_access(self) -> bool:
-        pass
+    def _find_user_agent_section(self, content: list) -> list:
+        # Create a user agent marker based on the class instance user agent
+        marker = "User-agent: " + self.user_agent
+        
+        # Initialize variables
+        section_lines = []
+        user_agent_found = False
+        
+        # Iterate over all the lines in the file
+        for line in content:
+            # Check if the current line is a user agent specification
+            if line.startswith("User-agent: "):
+                user_agent_found = (line == marker)
+            # If a user agent has been found, add the current line to the section
+            elif user_agent_found:
+                section_lines.append(line.strip())
+
+        # Return the section lines
+        return section_lines
         
     def _path_matches(self, url: str) -> bool:
         pass
