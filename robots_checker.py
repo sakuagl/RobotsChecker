@@ -15,16 +15,19 @@ class RobotsChecker:
         robots_url = urljoin(base_url, "/robots.txt")
 
         # Attempt to retrieve the content of the robots.txt file.
+        # https://developers.google.com/search/docs/crawling-indexing/robots/robots_txt#http-status-codes
         try:
             response = requests.get(robots_url)
-            # response.status_code = 100
             self._raise_status(response)
             content = response.text
-        except StatusError as e:
-            print("An Exception occurred:", str(e))
-        except requests.RequestException as e:
-            # If an error occurs, assume that access is not allowed.
-            # print("A error occurred:", str(e))
+        except StatusError:
+            status_code = response.status_code
+            
+            if status_code == 429 and status_code // 100 == 5:
+                return False
+            else:
+                return True 
+        except requests.RequestException:
             return False
 
         return True
