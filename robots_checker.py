@@ -1,3 +1,4 @@
+import re
 import requests
 from urllib.parse import urlparse, urljoin
 
@@ -38,11 +39,15 @@ class RobotsChecker:
         for line in user_agent_section:
             if line.startswith('Allow:'):
                 allow_path = line[len('Allow:'):].strip()
+                if self._path_matches(allow_path, url):
+                    is_allowed = True
             elif line.startswith('Disallow:'):
                 disallow_path = line[len('Disallow:'):].strip()
+                if self._path_matches(disallow_path, url):
+                    is_allowed = False
 
         # If access permission is not specified, allow access.
-        return is_allowed
+        # return is_allowed
         
     def _raise_status(self, response: requests.Response) -> None:
         """
@@ -73,6 +78,9 @@ class RobotsChecker:
         # Create a user agent marker based on the class instance user agent
         marker = "User-agent: " + self.user_agent
         
+        if marker not in content:
+            marker = "User-agent: *"
+        
         # Initialize variables
         section_lines = []
         user_agent_found = False
@@ -89,8 +97,20 @@ class RobotsChecker:
         # Return the section lines
         return section_lines
         
-    def _path_matches(self, url: str) -> bool:
-        pass
+    def _path_matches(self, rule: str, url: str) -> bool:
+        """
+        Check if a URL matches a given rule.
+        Args:
+            rule (str): A string representing the URL pattern to match.
+            url (str): A string representing the URL to test against the rule.
+        Returns:
+            bool: True if the URL matches the rule, False otherwise.
+        """
+        # Replace '*' with '.*' to create a regular expression pattern.
+        pattern = rule.replace("*", ".*")
+        # Use the 're.match' function to check if the URL matches the pattern.
+        return bool(re.match(pattern, url))
+        
 
 class StatusError(Exception):
     """
@@ -101,7 +121,7 @@ class StatusError(Exception):
         super().__init__(f"{message}: {status_code}")
 
 if __name__ == '__main__':
-    checker = RobotsChecker()
+    checker = RobotsChecker('')
     url = 'https://example.com'
     if checker.is_allowed(url):
         print(f'{url} is accessible.')
